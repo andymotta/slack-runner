@@ -1,0 +1,2 @@
+#!/bin/bash
+for i in {1..46}; do echo "line $i line $i line $i line $i line $i line $i line $i line $i line $i line $i line $i line $i line $i line $i line $i line $i line $i line $i line $i line $i line $i line $i line $i"; done
