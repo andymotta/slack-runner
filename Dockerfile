@@ -28,7 +28,7 @@ RUN apt -y install python3-pip && \
     for i in $(ls dependencies/*requirements.txt); do pip install -r $i; done
 
 # # Install Node
-RUN curl -fsSL https://deb.nodesource.com/setup_15.x | bash - && \
+RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - && \
     apt install -y nodejs
 # Install PHP
 RUN apt -y install php
