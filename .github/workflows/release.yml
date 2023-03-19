@@ -6,46 +6,66 @@ on:
       - 'v*'
 
 jobs:
-  release:
-    name: Release
+  build_and_release:
     runs-on: ubuntu-latest
-    env:
-      GOARCH: amd64
+    container:
+      image: golang:1.20
+
     steps:
-      - uses: actions/checkout@v2
-      - name: Set up Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.20
-      - name: Build for Linux
-        run: GOOS=linux go build -o slack-runner-linux ./src/
-      - name: Build for macOS
-        run: GOOS=darwin go build -o slack-runner-darwin ./src/
-      - name: Generate commit history
-        run: |
-          #!/bin/bash
-          echo "Changes in this release:" > commit-history.txt
-          echo "" >> commit-history.txt
-          git log --pretty=format:"- %s" --no-merges origin/main...HEAD >> commit-history.txt
-          echo "" >> commit-history.txt
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          body: $(cat commit-history.txt)
-          draft: false
-          prerelease: false
-      - name: Upload Linux Artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: slack-runner-linux
-          path: ./slack-runner-linux
-      - name: Upload macOS Artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: slack-runner-darwin
-          path: ./slack-runner-darwin
+    - name: Check out code
+      uses: actions/checkout@v2
+
+    - name: Download dependencies
+      run: go mod download -modfile=./src/go.mod
+
+    - name: Build Linux binary
+      env:
+        GOOS: linux
+        GOARCH: amd64
+      run: go build -o slack-runner-linux ./src/
+
+    - name: Build Darwin binary
+      env:
+        GOOS: darwin
+        GOARCH: amd64
+      run: go build -o slack-runner-darwin ./src/
+
+    - name: Generate commit history
+      run: |
+        #!/bin/bash
+        echo "Changes in this release:" > commit-history.txt
+        echo "" >> commit-history.txt
+        git log --pretty=format:"- %s" --no-merges origin/main...HEAD >> commit-history.txt
+        echo "" >> commit-history.txt
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.RELEASE_WORKFLOW_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        body: $(cat commit-history.txt)
+        draft: false
+        prerelease: false
+
+    - name: Upload Linux binary
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.RELEASE_WORKFLOW_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./slack-runner-linux
+        asset_name: slack-runner-linux
+        asset_content_type: application/octet-stream
+
+    - name: Upload Darwin binary
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.RELEASE_WORKFLOW_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./slack-runner-darwin
+        asset_name: slack-runner-darwin
+        asset_content_type: application/octet-stream
