@@ -1,6 +1,6 @@
 # ARG GO_VERSION
 # FROM golang:$GO_VERSION as builder
-FROM golang:latest as builder
+FROM golang:1.20 as builder
 
 WORKDIR /go/src/app
 COPY src/ .
@@ -37,6 +37,4 @@ RUN apt -y install php
 RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl && rm kubectl && kubectl version --client
 
 # Run Bot
-ENV SLACK_BOT_TOKEN="xoxb-<token>"
-ENV SLACK_APP_TOKEN="xapp-<token>"
 ENTRYPOINT ["/app"]

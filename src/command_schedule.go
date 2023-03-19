@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -38,6 +39,7 @@ func handleSchedule(ev *slackevents.AppMentionEvent, api *slack.Client, client *
 func listScheduledEvents(api *slack.Client, channel string) {
 	scheduledMessages, _, err := api.GetScheduledMessages(&slack.GetScheduledMessagesParameters{Channel: channel})
 	if err != nil {
+		log.Printf("Error getting scheduled messages: %v", err)
 		api.PostMessage(channel, slack.MsgOptionText(fmt.Sprintf("Error getting scheduled messages: %v", err), false))
 		return
 	}
@@ -64,6 +66,7 @@ func deleteScheduledEvent(api *slack.Client, channel string, messageID string) {
 	}
 	successful, err := api.DeleteScheduledMessage(params)
 	if err != nil {
+		log.Printf("Error deleting scheduled message: %v", err)
 		api.PostMessage(channel, slack.MsgOptionText(fmt.Sprintf("Error deleting scheduled message: %v", err), false))
 		return
 	}
@@ -75,21 +78,34 @@ func deleteScheduledEvent(api *slack.Client, channel string, messageID string) {
 }
 
 func createScheduledEvent(api *slack.Client, channel string, command []string) {
-	if len(command) < 4 {
-		api.PostMessage(channel, slack.MsgOptionText("Invalid create schedule command. Usage: `schedule create [scale] [number] [date] [time]`", false))
+	if len(command) < 3 {
+		api.PostMessage(channel, slack.MsgOptionText("Invalid create schedule command. Usage: `schedule create [date] [time] [message]`", false))
 		return
 	}
 
 	const (
 		layout = "2006-1-2 03:04PM"
 	)
-	loc, _ := time.LoadLocation("America/Los_Angeles")
-	t, err := time.ParseInLocation(layout, command[2]+" "+command[3], loc)
+	loc, err := time.LoadLocation("America/Los_Angeles")
+	if err != nil {
+		log.Printf("Error loading location: %v", err)
+		api.PostMessage(channel, slack.MsgOptionText("Error loading location. Please check the timezone settings.", false))
+		return
+	}
+
+	t, err := time.ParseInLocation(layout, command[0]+" "+command[1], loc)
 	if err != nil {
 		api.PostMessage(channel, slack.MsgOptionText("Invalid date or time format. Please use the format `YYYY-MM-DD hh:mmAM/PM`", false))
 		return
 	}
 
-	api.ScheduleMessage(channel, strconv.FormatInt(t.Unix(), 10), slack.MsgOptionText("@otherbot scale "+command[0]+" "+command[1], false))
-	api.PostMessage(channel, slack.MsgOptionText("Scheduled scaling event for "+command[0]+" to "+command[1]+" at: "+command[2]+" "+command[3], false))
+	message := strings.Join(command[2:], " ")
+
+	_, _, err = api.ScheduleMessage(channel, strconv.FormatInt(t.Unix(), 10), slack.MsgOptionText(message, false))
+	if err != nil {
+		log.Printf("Error scheduling message: %v", err)
+		api.PostMessage(channel, slack.MsgOptionText(fmt.Sprintf("Error scheduling message: %v", err), false))
+		return
+	}
+	api.PostMessage(channel, slack.MsgOptionText("Scheduled message for "+command[0]+" "+command[1]+": "+message, false))
 }

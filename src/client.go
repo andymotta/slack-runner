@@ -2,30 +2,9 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strings"
-
-	"github.com/slack-go/slack"
-	"github.com/slack-go/slack/socketmode"
 )
-
-func createSlackClients(appToken, botToken string) (*slack.Client, *socketmode.Client) {
-	api := slack.New(
-		botToken,
-		slack.OptionDebug(true),
-		slack.OptionLog(log.New(os.Stdout, "api: ", log.Lshortfile|log.LstdFlags)),
-		slack.OptionAppLevelToken(appToken),
-	)
-
-	client := socketmode.New(
-		api,
-		socketmode.OptionDebug(true),
-		socketmode.OptionLog(log.New(os.Stdout, "socketmode: ", log.Lshortfile|log.LstdFlags)),
-	)
-
-	return api, client
-}
 
 func checkTokens() (string, string) {
 	appToken := os.Getenv("SLACK_APP_TOKEN")

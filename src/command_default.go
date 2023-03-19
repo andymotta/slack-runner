@@ -24,7 +24,10 @@ func handleDefault(ev *slackevents.AppMentionEvent, api *slack.Client, client *s
 		basename := strings.TrimSuffix(script, extension)
 
 		if basename == command[0] {
-			executeScript(api, ev, script, extension, command)
+			err = executeScript(api, ev, script, extension, command)
+			if err != nil {
+				log.Printf("Error executing script %s: %v", script, err)
+			}
 		} else {
 			log.Println("Not running " + script)
 		}
@@ -35,7 +38,7 @@ func handleDefault(ev *slackevents.AppMentionEvent, api *slack.Client, client *s
 	}
 }
 
-func executeScript(api *slack.Client, ev *slackevents.AppMentionEvent, script, extension string, command []string) {
+func executeScript(api *slack.Client, ev *slackevents.AppMentionEvent, script, extension string, command []string) error {
 	switch extension {
 	case ".sh":
 		command = append([]string{"bash"}, command...)
@@ -47,7 +50,7 @@ func executeScript(api *slack.Client, ev *slackevents.AppMentionEvent, script, e
 		command = append([]string{"php"}, command...)
 	default:
 		log.Println("Unsupported extension, please see Dockerfile")
-		return
+		return fmt.Errorf("unsupported extension: %s", extension)
 	}
 	command[1] = script
 	cmd := exec.Command(command[0], command[1:]...)
@@ -56,14 +59,16 @@ func executeScript(api *slack.Client, ev *slackevents.AppMentionEvent, script, e
 		log.Fatal(err)
 	}
 	err = cmd.Start()
-	fmt.Println("The command is running")
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("Error starting command: %v", err)
+		return err
 	}
+	fmt.Println("The command is running")
 
 	channel, timestamp, err := api.PostMessage(ev.Channel, slack.MsgOptionText("Found script: "+script, false))
 	if err != nil {
-		fmt.Printf("failed posting message: %v", err)
+		log.Printf("failed posting message: %v", err)
+		return err
 	}
 
 	// print the output of the subprocess
@@ -77,5 +82,10 @@ func executeScript(api *slack.Client, ev *slackevents.AppMentionEvent, script, e
 			str.Reset()
 		}
 	}
-	cmd.Wait()
+	err = cmd.Wait()
+	if err != nil {
+		log.Printf("Error waiting for command to finish: %v", err)
+		return err
+	}
+	return nil
 }

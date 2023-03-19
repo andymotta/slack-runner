@@ -7,3 +7,5 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock # So we can run docker in docker
     environment:
       SCRIPTS_DIR: $PWD/scripts
+      SLACK_BOT_TOKEN: "xoxb-<token>"
+      SLACK_APP_TOKEN: "xapp-<token>"
