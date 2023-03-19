@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os/exec"
 	"strings"
 
@@ -11,22 +12,25 @@ import (
 	"github.com/slack-go/slack/socketmode"
 )
 
-func handleCmd(ev *slackevents.AppMentionEvent, api *slack.Client, client *socketmode.Client, command []string) {
+func handleCmd(ev *slackevents.AppMentionEvent, api *slack.Client, client *socketmode.Client, command []string) error {
 	cmd := exec.Command(command[1], command[2:]...)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		fmt.Println(err)
+		log.Println("Error creating StdoutPipe:", err)
+		return err
 	}
 
 	err = cmd.Start()
-	fmt.Println("The command is running")
 	if err != nil {
-		fmt.Println(err)
+		log.Println("Error starting command:", err)
+		return err
 	}
+	fmt.Println("The command is running")
 
 	channel, timestamp, err := api.PostMessage(ev.Channel, slack.MsgOptionText("Running the command: `"+command[1]+"` with supplied arguments...", false))
 	if err != nil {
-		fmt.Printf("failed posting message: %v", err)
+		log.Printf("failed posting message: %v", err)
+		return err
 	}
 
 	// print the output of the subprocess
@@ -41,5 +45,10 @@ func handleCmd(ev *slackevents.AppMentionEvent, api *slack.Client, client *socke
 			str.Reset()
 		}
 	}
-	cmd.Wait()
+	err = cmd.Wait()
+	if err != nil {
+		log.Println("Error waiting for command to finish:", err)
+		return err
+	}
+	return nil
 }

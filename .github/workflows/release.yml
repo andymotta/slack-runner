@@ -18,9 +18,9 @@ jobs:
         with:
           go-version: 1.20
       - name: Build for Linux
-        run: GOOS=linux go build -o app-linux ./src/
+        run: GOOS=linux go build -o slack-runner-linux ./src/
       - name: Build for macOS
-        run: GOOS=darwin go build -o app-darwin ./src/
+        run: GOOS=darwin go build -o slack-runner-darwin ./src/
       - name: Generate commit history
         run: |
           #!/bin/bash
@@ -42,10 +42,10 @@ jobs:
       - name: Upload Linux Artifact
         uses: actions/upload-artifact@v2
         with:
-          name: app-linux
-          path: ./app-linux
+          name: slack-runner-linux
+          path: ./slack-runner-linux
       - name: Upload macOS Artifact
         uses: actions/upload-artifact@v2
         with:
-          name: app-darwin
-          path: ./app-darwin
+          name: slack-runner-darwin
+          path: ./slack-runner-darwin
